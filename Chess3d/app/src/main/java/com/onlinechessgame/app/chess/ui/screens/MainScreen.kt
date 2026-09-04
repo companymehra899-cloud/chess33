@@ -61,8 +61,8 @@ fun MainScreen(
         return
     }
 
-    // Hide bottom navigation bar when inside an active game so player has full screen focus
-    val showBottomNav = matchState != MatchmakingState.IN_GAME
+    // Hide bottom navigation bar when inside an active game or true 3D gameplay
+    val showBottomNav = matchState != MatchmakingState.IN_GAME && currentTab != AppTab.TRUE_3D
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -229,6 +229,7 @@ fun MainScreen(
                     AppTab.LEADERBOARD -> LeaderboardScreen(viewModel = viewModel)
                     AppTab.PROFILE -> ProfileScreen(viewModel = viewModel)
                     AppTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+                    AppTab.TRUE_3D -> Chess3DGameScreen(viewModel = viewModel)
                 }
             }
         }

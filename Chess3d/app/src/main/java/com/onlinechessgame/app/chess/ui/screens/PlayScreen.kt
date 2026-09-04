@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Flag
@@ -697,6 +698,68 @@ private fun PlayLobbyView(
                             text = "${friends.size} Friends • Chat",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                onClick = { viewModel.openTrue3DGame() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("true_3d_gameplay_card"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A140C)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF3C96B).copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF3C96B).copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ViewInAr,
+                            contentDescription = null,
+                            tint = Color(0xFFF3C96B),
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "True 3D Chess",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFF3C96B).copy(alpha = 0.22f)
+                            ) {
+                                Text(
+                                    text = "NEW",
+                                    color = Color(0xFFF3C96B),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "Play vs AI on a real 3D isometric board",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp
                         )
                     }
                 }

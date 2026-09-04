@@ -5,6 +5,11 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
+# WebView JS bridge for true 3D chess
+-keepclassmembers class com.onlinechessgame.app.chess.ui.screens.Chess3DJsBridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
 # Room
 -keep class com.onlinechessgame.app.data.local.** { *; }
 -keep class androidx.room.** { *; }

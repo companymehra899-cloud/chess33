@@ -48,7 +48,8 @@ enum class AppTab {
     PUZZLES,
     LEADERBOARD,
     PROFILE,
-    SETTINGS
+    SETTINGS,
+    TRUE_3D
 }
 
 enum class HistoryFilter {
@@ -254,6 +255,15 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     fun setTab(tab: AppTab) {
         soundManager.playClickSound()
         _currentTab.value = tab
+    }
+
+    fun openTrue3DGame() {
+        soundManager.playClickSound()
+        _currentTab.value = AppTab.TRUE_3D
+    }
+
+    fun exitTrue3DGame() {
+        _currentTab.value = AppTab.PLAY
     }
 
     // MATCHMAKING & GAME LIFECYCLE
