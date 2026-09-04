@@ -756,11 +756,11 @@ private fun PlayLobbyView(
                             }
                         }
                         Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = "Play vs AI on a real 3D isometric board",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.sp
-                        )
+                            Text(
+                                text = "Online match or vs AI on a real 3D board",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 12.sp
+                            )
                     }
                 }
             }

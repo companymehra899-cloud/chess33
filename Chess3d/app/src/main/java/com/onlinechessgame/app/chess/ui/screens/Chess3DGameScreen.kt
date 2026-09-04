@@ -3,6 +3,7 @@ package com.onlinechessgame.app.chess.ui.screens
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -76,7 +77,12 @@ fun Chess3DGameScreen(
                     settings.loadWithOverviewMode = true
                     settings.builtInZoomControls = false
                     settings.displayZoomControls = false
-                    webChromeClient = WebChromeClient()
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onPermissionRequest(request: PermissionRequest) {
+                            request.grant(request.resources)
+                        }
+                    }
                     webViewClient = object : WebViewClient() {
                         override fun shouldInterceptRequest(
                             view: WebView,
