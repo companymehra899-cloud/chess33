@@ -83,17 +83,61 @@ class ChessEngine {
     }
 
     fun isSquareAttacked(pos: Position, byColor: PieceColor): Boolean {
-        for (r in 0..7) {
-            for (c in 0..7) {
+        val pawnFromRowDelta = if (byColor == PieceColor.WHITE) 1 else -1
+        for (dc in listOf(-1, 1)) {
+            val r = pos.row + pawnFromRowDelta
+            val c = pos.col + dc
+            if (r in 0..7 && c in 0..7) {
                 val p = board[r][c]
-                if (p != null && p.color == byColor) {
-                    val candidateMoves = getPseudoLegalMoves(Position(r, c), considerCastling = false)
-                    if (candidateMoves.any { it.to == pos }) {
-                        return true
-                    }
+                if (p != null && p.color == byColor && p.type == PieceType.PAWN) return true
+            }
+        }
+
+        val knightOffsets = listOf(
+            -2 to -1, -2 to 1, -1 to -2, -1 to 2,
+            1 to -2, 1 to 2, 2 to -1, 2 to 1
+        )
+        for ((dr, dc) in knightOffsets) {
+            val r = pos.row + dr
+            val c = pos.col + dc
+            if (r in 0..7 && c in 0..7) {
+                val p = board[r][c]
+                if (p != null && p.color == byColor && p.type == PieceType.KNIGHT) return true
+            }
+        }
+
+        for (dr in -1..1) {
+            for (dc in -1..1) {
+                if (dr == 0 && dc == 0) continue
+                val r = pos.row + dr
+                val c = pos.col + dc
+                if (r in 0..7 && c in 0..7) {
+                    val p = board[r][c]
+                    if (p != null && p.color == byColor && p.type == PieceType.KING) return true
                 }
             }
         }
+
+        val rookDirs = listOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1)
+        val bishopDirs = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
+        fun rayAttacked(dirs: List<Pair<Int, Int>>, types: Set<PieceType>): Boolean {
+            for ((dr, dc) in dirs) {
+                var r = pos.row + dr
+                var c = pos.col + dc
+                while (r in 0..7 && c in 0..7) {
+                    val p = board[r][c]
+                    if (p != null) {
+                        if (p.color == byColor && p.type in types) return true
+                        break
+                    }
+                    r += dr
+                    c += dc
+                }
+            }
+            return false
+        }
+        if (rayAttacked(rookDirs, setOf(PieceType.ROOK, PieceType.QUEEN))) return true
+        if (rayAttacked(bishopDirs, setOf(PieceType.BISHOP, PieceType.QUEEN))) return true
         return false
     }
 

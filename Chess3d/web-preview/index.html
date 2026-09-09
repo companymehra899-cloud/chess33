@@ -106,14 +106,14 @@
         <div class="avatar"><img alt="you" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23c9a06a'/%3E%3Cstop offset='1' stop-color='%236b4a2a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='40' cy='40' r='40' fill='%231a1510'/%3E%3Ccircle cx='40' cy='30' r='14' fill='url(%23g)'/%3E%3Cellipse cx='40' cy='64' rx='20' ry='16' fill='url(%23g)'/%3E%3C/svg%3E" /></div>
         <div class="meta">
           <div class="name" id="nameWhite">PLAYER 1 (YOU)</div>
-          <div class="timer" id="timerWhite">03:45</div>
+          <div class="timer" id="timerWhite">05:00</div>
         </div>
       </div>
       <div class="player right">
         <div class="avatar"><img alt="ai" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%238a7a6a'/%3E%3Cstop offset='1' stop-color='%23322a24'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='40' cy='40' r='40' fill='%2312100e'/%3E%3Ccircle cx='40' cy='30' r='14' fill='url(%23g)'/%3E%3Cellipse cx='40' cy='64' rx='20' ry='16' fill='url(%23g)'/%3E%3C/svg%3E" /></div>
         <div class="meta">
           <div class="name" id="nameBlack">PLAYER 2 (AI)</div>
-          <div class="timer" id="timerBlack">02:12</div>
+          <div class="timer" id="timerBlack">05:00</div>
         </div>
       </div>
     </div>
@@ -152,12 +152,17 @@
     import * as THREE from './three.module.js';
     import { OrbitControls } from './addons/controls/OrbitControls.js';
 
-    function exitToApp() {
+    function goHome() {
       if (window.AndroidChess && typeof window.AndroidChess.exit3D === 'function') {
         window.AndroidChess.exit3D();
+        return;
       }
+      destroyPeer();
+      resetGame();
+      showLobby();
+      updateHudNames();
     }
-    document.getElementById('btnHome')?.addEventListener('click', exitToApp);
+    document.getElementById('btnHome')?.addEventListener('click', goHome);
 
     const WHITE = 'w', BLACK = 'b';
     const START = [
@@ -175,8 +180,9 @@
     let turn = WHITE;
     let selected = null;
     let legal = [];
-    let whiteTime = 3 * 60 + 45;
-    let blackTime = 2 * 60 + 12;
+    const START_TIME = 5 * 60;
+    let whiteTime = START_TIME;
+    let blackTime = START_TIME;
     let gameOver = '';
     let mode = 'ai';
     let myColor = WHITE;
@@ -184,6 +190,9 @@
     let conn = null;
     let applyingRemote = false;
     let lobbyOpen = true;
+    let gameStarted = false;
+    let whiteCastleK = true, whiteCastleQ = true, blackCastleK = true, blackCastleQ = true;
+    let enPassant = null;
     const MATCH_PREFIX = 'chess33-3d-';
     const LOBBY_SLOTS = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'];
 
@@ -241,15 +250,20 @@
       const ctx = c.getContext('2d');
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 70; i++) {
-        const y = (i / 70) * h + Math.sin(i * 0.7) * 4;
+      for (let i = 0; i < 130; i++) {
+        const y = (i / 130) * h + Math.sin(i * 0.53) * 5 + Math.sin(i * 1.6) * 2;
         ctx.strokeStyle = grain;
-        ctx.globalAlpha = 0.07 + (i % 5) * 0.015;
-        ctx.lineWidth = 1 + (i % 3);
+        ctx.globalAlpha = 0.035 + (i % 7) * 0.012;
+        ctx.lineWidth = 0.7 + (i % 4) * 0.45;
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.bezierCurveTo(w * 0.3, y + 6, w * 0.7, y - 6, w, y + 2);
+        ctx.bezierCurveTo(w * 0.28, y + 7, w * 0.62, y - 6, w, y + 3);
         ctx.stroke();
+      }
+      ctx.globalAlpha = 0.07;
+      for (let i = 0; i < 500; i++) {
+        ctx.fillStyle = grain;
+        ctx.fillRect(Math.random() * w, Math.random() * h, 1.4, 1);
       }
       ctx.globalAlpha = 1;
       const tex = new THREE.CanvasTexture(c);
@@ -258,36 +272,45 @@
       tex.anisotropy = 8;
       return tex;
     }
-    const mapleTex = woodCanvas('#e0c39a', '#8a5a32', 256, 256);
-    const walnutTex = woodCanvas('#6a4224', '#2a160c', 256, 256);
-    const frameTex = woodCanvas('#7a4a28', '#3a2010', 512, 512);
-    frameTex.repeat.set(2, 2);
+    const mapleTex = woodCanvas('#edd4ae', '#c49a68', 512, 512);
+    const frameTex = woodCanvas('#8a5530', '#4a2c16', 512, 512);
+    frameTex.repeat.set(3, 1);
 
-    const woodLight = new THREE.MeshStandardMaterial({ map: mapleTex, color: 0xf0d4a8, roughness: 0.62, metalness: 0.02 });
-    const woodDark = new THREE.MeshStandardMaterial({ map: walnutTex, color: 0x8a5530, roughness: 0.68, metalness: 0.03 });
-    const frameMat = new THREE.MeshStandardMaterial({ map: frameTex, color: 0x8d5a32, roughness: 0.55, metalness: 0.04 });
+    const woodLight = new THREE.MeshStandardMaterial({ map: mapleTex, color: 0xf2d7b0, roughness: 0.58, metalness: 0.02 });
+    const frameMat = new THREE.MeshStandardMaterial({ map: frameTex, color: 0x865530, roughness: 0.5, metalness: 0.04 });
+    const woodDark = frameMat;
     const ivory = new THREE.MeshStandardMaterial({ color: 0xf4ead4, roughness: 0.28, metalness: 0.06 });
     const ebony = new THREE.MeshStandardMaterial({ color: 0x2c261f, roughness: 0.34, metalness: 0.08 });
 
     const boardRoot = new THREE.Group();
     scene.add(boardRoot);
 
-    const table = new THREE.Mesh(new THREE.BoxGeometry(9.55, 0.42, 9.55), frameMat);
-    table.position.y = -0.28;
+    const PLAY = 8;
+    const RIM = 1.18;
+    const OUTER = PLAY + RIM * 2;
+    const BODY_H = 0.58;
+    const table = new THREE.Mesh(new THREE.BoxGeometry(OUTER, BODY_H, OUTER), frameMat);
+    table.position.y = -BODY_H / 2 + 0.02;
     table.castShadow = true;
     table.receiveShadow = true;
     boardRoot.add(table);
-    const bevel = new THREE.Mesh(new THREE.BoxGeometry(9.15, 0.08, 9.15), frameMat);
-    bevel.position.y = -0.02;
+    const bevel = new THREE.Mesh(new THREE.BoxGeometry(OUTER - 0.2, 0.055, OUTER - 0.2), frameMat);
+    bevel.position.y = 0.038;
+    bevel.castShadow = true;
     bevel.receiveShadow = true;
     boardRoot.add(bevel);
+    const grooveMat = new THREE.MeshStandardMaterial({ color: 0x3d2414, roughness: 0.72, metalness: 0.02 });
+    const groove = new THREE.Mesh(new THREE.BoxGeometry(PLAY + 0.16, 0.02, PLAY + 0.16), grooveMat);
+    groove.position.y = 0.06;
+    groove.receiveShadow = true;
+    boardRoot.add(groove);
 
     const squareMeshes = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const light = (r + c) % 2 === 0;
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 1.0), light ? woodLight : woodDark);
-        mesh.position.set(c - 3.5, 0.03, r - 3.5);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.995, 0.045, 0.995), light ? woodLight : woodDark);
+        mesh.position.set(c - 3.5, 0.072, r - 3.5);
         mesh.receiveShadow = true;
         mesh.userData = { r, c, kind: 'square' };
         boardRoot.add(mesh);
@@ -419,7 +442,7 @@
     }
 
     const pieceMeshes = [];
-    function worldPos(r, c) { return new THREE.Vector3(c - 3.5, 0.055, r - 3.5); }
+    function worldPos(r, c) { return new THREE.Vector3(c - 3.5, 0.096, r - 3.5); }
     function rebuildPieces() {
       pieceMeshes.forEach(m => boardRoot.remove(m));
       pieceMeshes.length = 0;
@@ -454,7 +477,7 @@
           color: 0xf4d27a, transparent: true, opacity: 0.58, side: THREE.DoubleSide, depthWrite: false
         }));
         gold.rotation.x = -Math.PI / 2;
-        gold.position.set(selected.c - 3.5, 0.065, selected.r - 3.5);
+        gold.position.set(selected.c - 3.5, 0.1, selected.r - 3.5);
         highlightGroup.add(gold);
       }
       legal.forEach(m => {
@@ -462,7 +485,7 @@
           color: 0x7dff9a, transparent: true, opacity: 0.46, side: THREE.DoubleSide, depthWrite: false
         }));
         green.rotation.x = -Math.PI / 2;
-        green.position.set(m.c - 3.5, 0.065, m.r - 3.5);
+        green.position.set(m.c - 3.5, 0.1, m.r - 3.5);
         highlightGroup.add(green);
       });
     }
@@ -486,9 +509,9 @@
       return ok;
     }
     function squareAttacked(r, c, byColor) {
-      const pawnDir = byColor === WHITE ? -1 : 1;
+      const pawnFrom = byColor === WHITE ? 1 : -1;
       for (const dc of [-1, 1]) {
-        const nr = r + pawnDir, nc = c + dc;
+        const nr = r + pawnFrom, nc = c + dc;
         if (inBounds(nr, nc) && board[nr][nc] === byColor + 'P') return true;
       }
       const nOff = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
@@ -539,6 +562,7 @@
         for (const dc of [-1, 1]) {
           const nr = r + dir, nc = c + dc;
           if (inBounds(nr, nc) && enemy(board[nr][nc], color)) acc.push({ r: nr, c: nc });
+          else if (enPassant && nr === enPassant.r && nc === enPassant.c) acc.push({ r: nr, c: nc, ep: true });
         }
       }
       if (type === 'N') {
@@ -554,8 +578,33 @@
           const nr = r + dr, nc = c + dc;
           if (inBounds(nr, nc) && (!board[nr][nc] || enemy(board[nr][nc], color))) acc.push({ r: nr, c: nc });
         });
+        if (!inCheck(color)) {
+          const canK = color === WHITE ? whiteCastleK : blackCastleK;
+          const canQ = color === WHITE ? whiteCastleQ : blackCastleQ;
+          const enemyColor = color === WHITE ? BLACK : WHITE;
+          if (canK && empty(r, 5) && empty(r, 6) && board[r][7] === color + 'R') {
+            if (!squareAttacked(r, 5, enemyColor) && !squareAttacked(r, 6, enemyColor)) {
+              acc.push({ r, c: 6, castle: 'K' });
+            }
+          }
+          if (canQ && empty(r, 1) && empty(r, 2) && empty(r, 3) && board[r][0] === color + 'R') {
+            if (!squareAttacked(r, 2, enemyColor) && !squareAttacked(r, 3, enemyColor)) {
+              acc.push({ r, c: 2, castle: 'Q' });
+            }
+          }
+        }
       }
-      return acc.filter(m => kingSafeAfter(r, c, m.r, m.c, color));
+      return acc.filter(m => {
+        if (m.castle) return true;
+        if (m.ep) {
+          const savedFrom = board[r][c], savedTo = board[m.r][m.c], capR = r, capC = m.c, savedCap = board[capR][capC];
+          board[m.r][m.c] = savedFrom; board[r][c] = null; board[capR][capC] = null;
+          const ok = !inCheck(color);
+          board[r][c] = savedFrom; board[m.r][m.c] = savedTo; board[capR][capC] = savedCap;
+          return ok;
+        }
+        return kingSafeAfter(r, c, m.r, m.c, color);
+      });
     }
     function allMoves(color) {
       const out = [];
@@ -612,8 +661,32 @@
     function applyMove(fromR, fromC, toR, toC, remote) {
       const code = board[fromR][fromC];
       if (!code) return;
+      const color = code[0], type = code[1];
+      const isEp = type === 'P' && enPassant && toR === enPassant.r && toC === enPassant.c && !board[toR][toC];
+      const isCastle = type === 'K' && Math.abs(toC - fromC) === 2;
+      if (isEp) board[fromR][toC] = null;
       board[toR][toC] = code; board[fromR][fromC] = null;
-      if (code[1] === 'P' && (toR === 0 || toR === 7)) board[toR][toC] = code[0] + 'Q';
+      if (isCastle) {
+        if (toC === 6) { board[toR][5] = board[toR][7]; board[toR][7] = null; }
+        else if (toC === 2) { board[toR][3] = board[toR][0]; board[toR][0] = null; }
+      }
+      if (type === 'P' && (toR === 0 || toR === 7)) board[toR][toC] = color + 'Q';
+      if (type === 'K') {
+        if (color === WHITE) { whiteCastleK = false; whiteCastleQ = false; }
+        else { blackCastleK = false; blackCastleQ = false; }
+      }
+      if (type === 'R') {
+        if (fromR === 7 && fromC === 7) whiteCastleK = false;
+        if (fromR === 7 && fromC === 0) whiteCastleQ = false;
+        if (fromR === 0 && fromC === 7) blackCastleK = false;
+        if (fromR === 0 && fromC === 0) blackCastleQ = false;
+      }
+      if (toR === 7 && toC === 7) whiteCastleK = false;
+      if (toR === 7 && toC === 0) whiteCastleQ = false;
+      if (toR === 0 && toC === 7) blackCastleK = false;
+      if (toR === 0 && toC === 0) blackCastleQ = false;
+      if (type === 'P' && Math.abs(toR - fromR) === 2) enPassant = { r: (fromR + toR) / 2, c: fromC };
+      else enPassant = null;
       selected = null; legal = [];
       rebuildPieces(); showHighlights();
       turn = turn === WHITE ? BLACK : WHITE;
@@ -631,6 +704,25 @@
         conn.send({ type: 'move', fromR, fromC, toR, toC });
       }
     }
+    function resetGame() {
+      for (let r = 0; r < 8; r++) board[r] = START[r].slice();
+      turn = WHITE;
+      selected = null;
+      legal = [];
+      whiteTime = START_TIME;
+      blackTime = START_TIME;
+      gameOver = '';
+      myColor = WHITE;
+      applyingRemote = false;
+      gameStarted = false;
+      whiteCastleK = whiteCastleQ = blackCastleK = blackCastleQ = true;
+      enPassant = null;
+      document.getElementById('timerWhite').textContent = fmt(whiteTime);
+      document.getElementById('timerBlack').textContent = fmt(blackTime);
+      rebuildPieces();
+      showHighlights();
+      setStatus('');
+    }
     function aiMove() {
       if (gameOver || mode !== 'ai' || turn !== BLACK) return;
       const moves = allMoves(BLACK);
@@ -642,8 +734,10 @@
     function bindConnection(c, asHost) {
       conn = c;
       const startOnline = () => {
+        resetGame();
         mode = 'online';
         myColor = asHost ? WHITE : BLACK;
+        gameStarted = true;
         hideLobby();
         updateHudNames();
         orientCamera();
@@ -669,8 +763,10 @@
     }
     function startAiGame() {
       destroyPeer();
+      resetGame();
       mode = 'ai';
       myColor = WHITE;
+      gameStarted = true;
       hideLobby();
       updateHudNames();
       orientCamera();
@@ -759,7 +855,7 @@
     });
 
     setInterval(() => {
-      if (gameOver) return;
+      if (!gameStarted || lobbyOpen || gameOver) return;
       if (turn === WHITE) whiteTime = Math.max(0, whiteTime - 1);
       else blackTime = Math.max(0, blackTime - 1);
       document.getElementById('timerWhite').textContent = fmt(whiteTime);
@@ -769,8 +865,7 @@
           ? (myColor === WHITE ? 'TIME — OPPONENT WINS' : 'TIME — YOU WIN')
           : 'TIME — AI WINS';
         setStatus(gameOver);
-      }
-      if (blackTime === 0) {
+      } else if (blackTime === 0) {
         gameOver = mode === 'online'
           ? (myColor === BLACK ? 'TIME — OPPONENT WINS' : 'TIME — YOU WIN')
           : 'TIME — YOU WIN';
